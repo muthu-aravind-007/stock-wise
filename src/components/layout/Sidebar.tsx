@@ -8,7 +8,8 @@ import {
   FileText, 
   Menu,
   X,
-  TrendingUp
+  TrendingUp,
+  Wallet
 } from 'lucide-react';
 import {
   Sidebar,
@@ -48,6 +49,11 @@ const navigationItems = [
     title: 'Reports',
     url: '/reports',
     icon: FileText,
+  },
+  {
+  title: 'Expenses',
+  url: '/expenses',
+  icon: Wallet,
   },
 ];
 

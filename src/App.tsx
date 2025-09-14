@@ -10,6 +10,8 @@ import Suppliers from "./pages/Suppliers";
 import Transactions from "./pages/Transactions";
 import Reports from "./pages/Reports";
 import NotFound from "./pages/NotFound";
+import Expenses from "./pages/Expenses";
+import TestSupabase from "@/components/ui/testSupabase";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +28,8 @@ const App = () => (
             <Route path="/suppliers" element={<Suppliers />} />
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/expenses" element={<Expenses />} />
+            <Route path="/test-supabase" element={<TestSupabase />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>
