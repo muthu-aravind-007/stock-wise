@@ -76,14 +76,75 @@
 }
 
 @layer base {
-  * {
-    @apply border-border;
+  :root {
+    /* 🌞 Light Theme */
+    --primary: 142 69% 40%; /* Softer Green */
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 142 69% 60%;
+    
+    --secondary: 259 94% 51%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-glow: 259 94% 65%;
+    
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+    --accent-glow: 217 91% 75%;
+    
+    /* Light Surfaces */
+    --background: 0 0% 100%;  /* white */
+    --foreground: 240 10% 3.9%; /* black text */
+    --surface: 0 0% 98%;
+    --surface-glass: 0 0% 95%;
+    
+    /* Muted & Borders */
+    --muted: 0 0% 92%;
+    --muted-foreground: 240 5% 26%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 142 69% 40%;
+    
+    /* Card & Popover */
+    --card: var(--surface);
+    --card-foreground: var(--foreground);
+    --popover: var(--surface);
+    --popover-foreground: var(--foreground);
   }
 
-  body {
-    @apply bg-background text-foreground font-sans antialiased;
+  /* 🌚 Dark Theme */
+  .dark {
+    --primary: 142 69% 58%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 142 69% 70%;
+    
+    --secondary: 259 94% 51%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-glow: 259 94% 65%;
+    
+    --accent: 217 91% 60%;
+    --accent-foreground: 0 0% 100%;
+    --accent-glow: 217 91% 75%;
+    
+    /* Dark Surfaces */
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+    --surface: 240 10% 6%;
+    --surface-glass: 240 10% 8%;
+    
+    /* Muted & Borders */
+    --muted: 240 5% 15%;
+    --muted-foreground: 240 5% 64.9%;
+    --border: 240 6% 20%;
+    --input: 240 6% 20%;
+    --ring: 142 69% 58%;
+    
+    /* Card & Popover */
+    --card: var(--surface);
+    --card-foreground: var(--foreground);
+    --popover: var(--surface);
+    --popover-foreground: var(--foreground);
   }
 }
+
 
 @layer components {
   /* Glass Morphism Components */

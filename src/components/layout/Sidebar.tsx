@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -6,8 +5,6 @@ import {
   Users, 
   ArrowUpDown, 
   FileText, 
-  Menu,
-  X,
   TrendingUp,
   Wallet
 } from 'lucide-react';
@@ -22,12 +19,11 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
 
 const navigationItems = [
   {
     title: 'Dashboard',
-    url: '/',
+    url: '/dashboard',
     icon: LayoutDashboard,
   },
   {
@@ -51,9 +47,9 @@ const navigationItems = [
     icon: FileText,
   },
   {
-  title: 'Expenses',
-  url: '/expenses',
-  icon: Wallet,
+    title: 'Expenses',
+    url: '/expenses',
+    icon: Wallet,
   },
 ];
 
@@ -80,8 +76,11 @@ export function AppSidebar() {
   return (
     <Sidebar className={`glass-card border-r-0 ${isCollapsed ? 'w-14' : 'w-64'}`}>
       <SidebarContent className="p-4">
-        {/* Logo Section */}
-        <div className="flex items-center gap-3 mb-8">
+        {/* ✅ Logo Section - Clicking it goes to Home Page */}
+        <NavLink 
+          to="/" 
+          className="flex items-center gap-3 mb-8 cursor-pointer hover:opacity-90 transition-all duration-300"
+        >
           <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center">
             <TrendingUp className="w-6 h-6 text-white" />
           </div>
@@ -91,8 +90,9 @@ export function AppSidebar() {
               <p className="text-xs text-muted-foreground">Inventory Management</p>
             </div>
           )}
-        </div>
+        </NavLink>
 
+        {/* ✅ Navigation Group */}
         <SidebarGroup>
           <SidebarGroupLabel className={isCollapsed ? 'sr-only' : 'text-muted-foreground font-medium mb-2'}>
             Navigation
@@ -118,7 +118,7 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Stats Section - Only show when expanded */}
+        {/* ✅ Stats Section - Only show when expanded */}
         {!isCollapsed && (
           <div className="mt-8 p-4 glass-surface rounded-xl">
             <h3 className="text-sm font-medium text-muted-foreground mb-3">Quick Stats</h3>
