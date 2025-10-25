@@ -1,32 +1,119 @@
-import { useState } from 'react';
-import { Plus, Search, Mail, Phone, MapPin, Edit, Trash2, Building } from 'lucide-react';
+// Suppliers.tsx
+import { useEffect, useState } from 'react';
+import { Plus, Mail, Phone, MapPin, Edit, Trash2, Building } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { mockSuppliers, mockProducts } from '@/lib/mockData';
-import { Supplier } from '@/types/inventory';
+import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { supabase } from '../lib/supabaseClient';
+
+interface Supplier {
+  id: string;
+  name: string;
+  contact_person: string;
+  email: string;
+  phone: string;
+  address: string;
+  created_at: string;
+}
 
 export default function Suppliers() {
-  const [suppliers, setSuppliers] = useState<Supplier[]>(mockSuppliers);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredSuppliers = suppliers.filter(supplier =>
-    supplier.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.contactPerson.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    supplier.email.toLowerCase().includes(searchTerm.toLowerCase())
+  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+
+  // Form state
+  const [form, setForm] = useState({
+    name: '',
+    contact_person: '',
+    email: '',
+    phone: '',
+    address: '',
+  });
+
+  // Fetch suppliers
+  useEffect(() => {
+    fetchSuppliers();
+  }, []);
+
+  const fetchSuppliers = async () => {
+    const { data, error } = await supabase
+      .from('suppliers')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) console.error('Fetch suppliers error:', error);
+    else setSuppliers(data as Supplier[]);
+  };
+
+  // Add new supplier
+  const addSupplier = async () => {
+    const { name, contact_person, email, phone, address } = form;
+    if (!name || !contact_person || !email) return alert('Please fill required fields');
+
+    const { error } = await supabase
+      .from('suppliers')
+      .insert([{ name, contact_person, email, phone, address }]);
+    if (error) console.error('Insert supplier error:', error);
+    else {
+      fetchSuppliers();
+      closeModal();
+    }
+  };
+
+  // Update existing supplier
+  const updateSupplier = async () => {
+    if (!editingSupplier) return;
+    const { error } = await supabase
+      .from('suppliers')
+      .update(form)
+      .eq('id', editingSupplier.id);
+    if (error) console.error('Update supplier error:', error);
+    else {
+      fetchSuppliers();
+      closeModal();
+    }
+  };
+
+  // Delete supplier
+  const deleteSupplier = async (id: string) => {
+    const { error } = await supabase.from('suppliers').delete().eq('id', id);
+    if (error) console.error('Delete supplier error:', error);
+    else fetchSuppliers();
+  };
+
+  // Open modal for editing
+  const startEditSupplier = (supplier: Supplier) => {
+    setEditingSupplier(supplier);
+    setForm({
+      name: supplier.name,
+      contact_person: supplier.contact_person,
+      email: supplier.email,
+      phone: supplier.phone,
+      address: supplier.address,
+    });
+    setIsModalOpen(true);
+  };
+
+  // Close modal
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setEditingSupplier(null);
+    setForm({ name: '', contact_person: '', email: '', phone: '', address: '' });
+  };
+
+  // Filter suppliers
+  const filteredSuppliers = suppliers.filter(
+    (s) =>
+      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.contact_person.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getSuppliedProductsCount = (supplierId: string) => {
-    return mockProducts.filter(product => product.supplierId === supplierId).length;
-  };
-
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    }).format(date);
-  };
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
@@ -36,16 +123,59 @@ export default function Suppliers() {
           <h1 className="text-3xl font-bold heading-gradient">Suppliers</h1>
           <p className="text-muted-foreground">Manage your supplier relationships</p>
         </div>
-        <Button size="lg" className="gradient-secondary hover-glow">
-          <Plus className="mr-2 w-5 h-5" />
-          Add Supplier
-        </Button>
+
+        {/* Add/Edit Supplier Modal */}
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogTrigger asChild>
+            <Button size="lg" className="gradient-secondary hover-glow">
+              <Plus className="mr-2 w-5 h-5" />
+              {editingSupplier ? 'Edit Supplier' : 'Add Supplier'}
+            </Button>
+          </DialogTrigger>
+
+          <DialogContent className="sm:max-w-[450px] text-white">
+            <DialogHeader>
+              <DialogTitle>{editingSupplier ? 'Edit Supplier' : 'Add New Supplier'}</DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-3 mt-4 text-white">
+              <Input
+                placeholder="Name*"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+              <Input
+                placeholder="Contact Person*"
+                value={form.contact_person}
+                onChange={(e) => setForm({ ...form, contact_person: e.target.value })}
+              />
+              <Input
+                placeholder="Email*"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+              />
+              <Input
+                placeholder="Phone"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+              />
+              <Input
+                placeholder="Address"
+                value={form.address}
+                onChange={(e) => setForm({ ...form, address: e.target.value })}
+              />
+
+              <Button className="w-full mt-2" onClick={editingSupplier ? updateSupplier : addSupplier}>
+                {editingSupplier ? 'Update Supplier' : 'Add Supplier'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Search */}
       <div className="glass-card p-6">
         <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="search"
             placeholder="Search suppliers..."
@@ -67,14 +197,24 @@ export default function Suppliers() {
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-foreground">{supplier.name}</h3>
-                  <p className="text-sm text-muted-foreground">{supplier.contactPerson}</p>
+                  <p className="text-sm text-muted-foreground">{supplier.contact_person}</p>
                 </div>
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" size="sm" className="hover:bg-primary/10">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hover:bg-primary/10"
+                  onClick={() => startEditSupplier(supplier)}
+                >
                   <Edit className="w-4 h-4" />
                 </Button>
-                <Button variant="ghost" size="sm" className="hover:bg-destructive/10 text-destructive">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="hover:bg-destructive/10 text-destructive"
+                  onClick={() => deleteSupplier(supplier.id)}
+                >
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
@@ -95,54 +235,12 @@ export default function Suppliers() {
               </div>
             </div>
 
-            <div className="border-t border-glass-border pt-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Products Supplied</span>
-                <Badge className="gradient-primary text-white">
-                  {getSuppliedProductsCount(supplier.id)}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Partner Since</span>
-                <span className="text-sm font-medium text-foreground">
-                  {formatDate(supplier.createdAt)}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex gap-2 mt-4">
-              <Button variant="outline" size="sm" className="flex-1">
-                <Mail className="w-4 h-4 mr-2" />
-                Contact
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1">
-                View Products
-              </Button>
+            <div className="border-t border-glass-border pt-4 flex justify-between text-sm text-muted-foreground">
+              <span>Partner Since</span>
+              <span className="font-medium text-foreground">{formatDate(supplier.created_at)}</span>
             </div>
           </div>
         ))}
-      </div>
-
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="glass-card p-6 text-center">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Total Suppliers</h3>
-          <p className="text-3xl font-bold text-primary">{filteredSuppliers.length}</p>
-        </div>
-        <div className="glass-card p-6 text-center">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Active This Month</h3>
-          <p className="text-3xl font-bold text-success">{Math.floor(filteredSuppliers.length * 0.8)}</p>
-        </div>
-        <div className="glass-card p-6 text-center">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">New This Quarter</h3>
-          <p className="text-3xl font-bold text-accent">{Math.floor(filteredSuppliers.length * 0.2)}</p>
-        </div>
-        <div className="glass-card p-6 text-center">
-          <h3 className="text-sm font-medium text-muted-foreground mb-2">Avg Products/Supplier</h3>
-          <p className="text-3xl font-bold text-secondary">
-            {Math.round(mockProducts.length / filteredSuppliers.length)}
-          </p>
-        </div>
       </div>
     </div>
   );

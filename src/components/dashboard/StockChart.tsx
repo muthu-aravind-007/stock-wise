@@ -14,16 +14,17 @@ const COLORS = [
   'hsl(0 84% 60%)',   // Destructive red
 ];
 
-export function StockChart({ data, type = 'bar' }: StockChartProps) {
-  const formatValue = (value: number) => {
-    if (value >= 1000000) {
-      return `$${(value / 1000000).toFixed(1)}M`;
-    } else if (value >= 1000) {
-      return `$${(value / 1000).toFixed(1)}K`;
-    }
-    return `$${value.toFixed(0)}`;
-  };
+// INR formatter
+const formatINR = (value: number) => {
+  if (value >= 100000) {
+    return `₹${(value / 100000).toFixed(1)}L`; // 1 lakh
+  } else if (value >= 1000) {
+    return `₹${new Intl.NumberFormat('en-IN').format(value)}`;
+  }
+  return `₹${value}`;
+};
 
+export function StockChart({ data, type = 'bar' }: StockChartProps) {
   if (type === 'pie') {
     return (
       <div className="glass-card p-6 h-80">
@@ -43,13 +44,13 @@ export function StockChart({ data, type = 'bar' }: StockChartProps) {
                 <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip 
-              formatter={(value: number) => [formatValue(value), 'Value']}
+            <Tooltip
+              formatter={(value: number) => [formatINR(value), 'Value']}
               labelStyle={{ color: 'hsl(var(--foreground))' }}
-              contentStyle={{ 
+              contentStyle={{
                 backgroundColor: 'hsl(var(--surface))',
                 border: '1px solid hsl(var(--border))',
-                borderRadius: '8px'
+                borderRadius: '8px',
               }}
             />
           </PieChart>
@@ -72,15 +73,15 @@ export function StockChart({ data, type = 'bar' }: StockChartProps) {
           <YAxis 
             stroke="hsl(var(--muted-foreground))"
             fontSize={12}
-            tickFormatter={formatValue}
+            tickFormatter={formatINR} // ✅ INR formatting
           />
-          <Tooltip 
-            formatter={(value: number) => [formatValue(value), 'Value']}
+          <Tooltip
+            formatter={(value: number) => [formatINR(value), 'Value']} // ✅ INR tooltip
             labelStyle={{ color: 'hsl(var(--foreground))' }}
-            contentStyle={{ 
+            contentStyle={{
               backgroundColor: 'hsl(var(--surface))',
               border: '1px solid hsl(var(--border))',
-              borderRadius: '8px'
+              borderRadius: '8px',
             }}
           />
           <Bar 

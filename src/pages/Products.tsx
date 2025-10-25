@@ -1,8 +1,7 @@
-import { useState } from 'react';
-import { Plus, Search, Filter, Edit, Trash2, AlertTriangle } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
+import { useState, useEffect } from "react";
+import { Plus, Search, Filter, Edit, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -10,41 +9,171 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { mockProducts } from '@/lib/mockData';
-import { Product } from '@/types/inventory';
+} from "@/components/ui/select";
+import { supabase } from "@/lib/supabaseClient";
+
+type Product = {
+  id: string;
+  name: string;
+  description: string | null;
+  category: string | null;
+  stock: number;
+  price: number;
+  supplier_id: string | null;
+  created_at: string | null;
+};
 
 export default function Products() {
-  const [products, setProducts] = useState<Product[]>(mockProducts);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [open, setOpen] = useState(false);
+  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState(false);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [form, setForm] = useState({
+    name: "",
+    description: "",
+    category: "",
+    stock: "",
+    price: "",
+  });
 
-  const categories = [...new Set(products.map(p => p.category))];
-  
-  const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         product.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
+  // ✅ Fetch products
+  const fetchProducts = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .order("name");
+    if (error) console.error("Error fetching products:", error.message);
+    else setProducts(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  // ✅ Handle form input changes
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  // ✅ Save product (add or update)
+  const handleSave = async () => {
+    const payload = {
+      name: form.name.trim(),
+      description: form.description.trim() || null,
+      category: form.category.trim() || null,
+      stock: Number(form.stock),
+      price: Number(form.price),
+    };
+
+    if (editProduct) {
+      const { data, error } = await supabase
+        .from("products")
+        .update(payload)
+        .eq("id", editProduct.id)
+        .select();
+
+      if (error) console.error("Error updating product:", error.message);
+      else {
+        setProducts((prev) =>
+          prev.map((p) => (p.id === editProduct.id ? data[0] : p))
+        );
+        setOpen(false);
+      }
+    } else {
+      const { data, error } = await supabase
+        .from("products")
+        .insert([payload])
+        .select();
+      if (error) console.error("Error adding product:", error.message);
+      else setProducts((prev) => [...prev, ...(data || [])]);
+      setOpen(false);
+    }
+
+    setForm({ name: "", description: "", category: "", stock: "", price: "" });
+    setEditProduct(null);
+  };
+
+  // ✅ Delete product (with custom dialog)
+  const confirmDelete = (product: Product) => {
+    setProductToDelete(product);
+    setDeleteDialog(true);
+  };
+
+  const handleDelete = async () => {
+    if (!productToDelete) return;
+
+    const { error } = await supabase
+      .from("products")
+      .delete()
+      .eq("id", productToDelete.id);
+
+    if (error) {
+      console.error("❌ Error deleting product:", error.message);
+    } else {
+      console.log("✅ Product deleted:", productToDelete.name);
+      setProducts((prev) =>
+        prev.filter((p) => p.id !== productToDelete.id)
+      );
+    }
+
+    setDeleteDialog(false);
+    setProductToDelete(null);
+  };
+
+  // ✅ Edit product
+  const handleEdit = (product: Product) => {
+    setEditProduct(product);
+    setForm({
+      name: product.name,
+      description: product.description || "",
+      category: product.category || "",
+      stock: product.stock.toString(),
+      price: product.price.toString(),
+    });
+    setOpen(true);
+  };
+
+  // ✅ Currency formatter
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+    }).format(value);
+
+  // ✅ Filtering
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (product.description?.toLowerCase().includes(searchTerm.toLowerCase()) ??
+        false);
+    const matchesCategory =
+      categoryFilter === "all" || product.category === categoryFilter;
     return matchesSearch && matchesCategory;
   });
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(value);
-  };
-
-  const isLowStock = (product: Product) => {
-    return product.quantity <= product.lowStockThreshold;
-  };
+  const categories = [
+    ...new Set(products.map((p) => p.category).filter(Boolean)),
+  ];
 
   return (
     <div className="p-6 space-y-6 animate-fade-in">
@@ -54,9 +183,22 @@ export default function Products() {
           <h1 className="text-3xl font-bold heading-gradient">Products</h1>
           <p className="text-muted-foreground">Manage your product inventory</p>
         </div>
-        <Button size="lg" className="gradient-primary hover-glow">
-          <Plus className="mr-2 w-5 h-5" />
-          Add Product
+        <Button
+          size="lg"
+          className="gradient-primary hover-glow"
+          onClick={() => {
+            setEditProduct(null);
+            setForm({
+              name: "",
+              description: "",
+              category: "",
+              stock: "",
+              price: "",
+            });
+            setOpen(true);
+          }}
+        >
+          <Plus className="mr-2 w-5 h-5" /> Add Product
         </Button>
       </div>
 
@@ -64,11 +206,11 @@ export default function Products() {
       <div className="glass-card p-6">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search products or SKU..."
-              className="pl-10 glass-surface border-glass-border"
+              placeholder="Search products..."
+              className="pl-10 text-white placeholder:text-gray-400"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -80,7 +222,7 @@ export default function Products() {
             </SelectTrigger>
             <SelectContent className="glass-card border-glass-border">
               <SelectItem value="all">All Categories</SelectItem>
-              {categories.map(category => (
+              {categories.map((category) => (
                 <SelectItem key={category} value={category}>
                   {category}
                 </SelectItem>
@@ -91,104 +233,140 @@ export default function Products() {
       </div>
 
       {/* Products Table */}
-      <div className="glass-card">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-glass-border">
-              <TableHead className="text-foreground font-semibold">Product</TableHead>
-              <TableHead className="text-foreground font-semibold">SKU</TableHead>
-              <TableHead className="text-foreground font-semibold">Category</TableHead>
-              <TableHead className="text-foreground font-semibold">Stock</TableHead>
-              <TableHead className="text-foreground font-semibold">Price</TableHead>
-              <TableHead className="text-foreground font-semibold">Total Value</TableHead>
-              <TableHead className="text-foreground font-semibold">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredProducts.map((product) => (
-              <TableRow key={product.id} className="border-glass-border hover:bg-surface/30">
-                <TableCell>
-                  <div className="flex items-center gap-3">
-                    <div>
-                      <p className="font-medium text-foreground">{product.name}</p>
-                      {isLowStock(product) && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <AlertTriangle className="w-3 h-3 text-warning" />
-                          <span className="text-xs text-warning">Low Stock</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="font-mono">
-                    {product.sku}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge className="glass-surface text-foreground">
-                    {product.category}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <span className={`font-semibold ${
-                      isLowStock(product) ? 'text-warning' : 'text-foreground'
-                    }`}>
-                      {product.quantity}
-                    </span>
-                    {isLowStock(product) && (
-                      <Badge variant="outline" className="status-warning text-xs">
-                        Low
-                      </Badge>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="font-medium text-foreground">
-                  {formatCurrency(product.unitPrice)}
-                </TableCell>
-                <TableCell className="font-semibold text-success">
-                  {formatCurrency(product.quantity * product.unitPrice)}
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" className="hover:bg-primary/10">
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" className="hover:bg-destructive/10 text-destructive">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </TableCell>
+      {loading ? (
+        <p className="text-center text-muted-foreground">Loading...</p>
+      ) : (
+        <div className="glass-card">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Product</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Stock</TableHead>
+                <TableHead>Price</TableHead>
+                <TableHead>Total Value</TableHead>
+                <TableHead>Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {filteredProducts.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell>{product.name}</TableCell>
+                  <TableCell>{product.description}</TableCell>
+                  <TableCell>{product.category}</TableCell>
+                  <TableCell>{product.stock}</TableCell>
+                  <TableCell>{formatCurrency(product.price)}</TableCell>
+                  <TableCell className="text-success">
+                    {formatCurrency(product.stock * product.price)}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEdit(product)}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        onClick={() => confirmDelete(product)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
-      {/* Summary Card */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass-card p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-2">Total Products</h3>
-          <p className="text-3xl font-bold text-primary">{filteredProducts.length}</p>
-        </div>
-        <div className="glass-card p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-2">Low Stock Items</h3>
-          <p className="text-3xl font-bold text-warning">
-            {filteredProducts.filter(isLowStock).length}
+      {/* Add/Edit Modal */}
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="glass-card border border-glass-border text-white">
+          <DialogHeader>
+            <DialogTitle>{editProduct ? "Edit Product" : "Add Product"}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-3 mt-2">
+            <Input
+              name="name"
+              placeholder="Product name"
+              value={form.name}
+              onChange={handleChange}
+              className="text-white placeholder:text-gray-400"
+            />
+            <Input
+              name="description"
+              placeholder="Description"
+              value={form.description}
+              onChange={handleChange}
+              className="text-white placeholder:text-gray-400"
+            />
+            <Input
+              name="category"
+              placeholder="Category"
+              value={form.category}
+              onChange={handleChange}
+              className="text-white placeholder:text-gray-400"
+            />
+            <Input
+              name="stock"
+              placeholder="Stock"
+              type="number"
+              value={form.stock}
+              onChange={handleChange}
+              className="text-white placeholder:text-gray-400"
+            />
+            <Input
+              name="price"
+              placeholder="Price"
+              type="number"
+              value={form.price}
+              onChange={handleChange}
+              className="text-white placeholder:text-gray-400"
+            />
+          </div>
+
+          <DialogFooter className="mt-4">
+            <Button variant="secondary" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>
+              {editProduct ? "Update" : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
+        <DialogContent className="glass-card border border-glass-border text-white text-center">
+          <DialogHeader>
+            <DialogTitle>Confirm Deletion</DialogTitle>
+          </DialogHeader>
+          <p>
+            Are you sure you want to delete{" "}
+            <span className="font-semibold text-destructive">
+              {productToDelete?.name}
+            </span>
+            ?
           </p>
-        </div>
-        <div className="glass-card p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-2">Total Value</h3>
-          <p className="text-3xl font-bold text-success">
-            {formatCurrency(
-              filteredProducts.reduce((sum, product) => 
-                sum + (product.quantity * product.unitPrice), 0
-              )
-            )}
-          </p>
-        </div>
-      </div>
+          <DialogFooter className="mt-4 flex justify-center gap-3">
+            <Button variant="secondary" onClick={() => setDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleDelete}>
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

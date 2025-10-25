@@ -24,7 +24,7 @@ const NotFound = () => {
         </p>
         <Button size="lg" className="gradient-primary hover-glow">
           <a href="/" className="flex items-center">
-            Return to Dashboard
+            Return to Home
           </a>
         </Button>
       </div>

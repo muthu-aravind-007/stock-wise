@@ -118,26 +118,6 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* ✅ Stats Section - Only show when expanded */}
-        {!isCollapsed && (
-          <div className="mt-8 p-4 glass-surface rounded-xl">
-            <h3 className="text-sm font-medium text-muted-foreground mb-3">Quick Stats</h3>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">Active Products</span>
-                <span className="text-sm font-semibold text-primary">47</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">Low Stock</span>
-                <span className="text-sm font-semibold text-warning">3</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-xs text-muted-foreground">Total Value</span>
-                <span className="text-sm font-semibold text-success">$89.2K</span>
-              </div>
-            </div>
-          </div>
-        )}
       </SidebarContent>
     </Sidebar>
   );

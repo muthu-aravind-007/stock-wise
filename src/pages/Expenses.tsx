@@ -1,39 +1,88 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/lib/supabaseClient"; // ✅ use the shared client
 
 type Expense = {
-  id: number;
-  date: string;
+  id: string;
+  expense_date: string;
   category: string;
   amount: number;
   notes: string;
 };
 
 export default function Expenses() {
-  const [expenses, setExpenses] = useState<Expense[]>([
-    { id: 1, date: "2025-09-10", category: "Office Supplies", amount: 120, notes: "Printer ink" },
-    { id: 2, date: "2025-09-12", category: "Utilities", amount: 75, notes: "Electricity bill" },
-  ]);
-
-  const [form, setForm] = useState<Expense>({
-    id: 0,
-    date: "",
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [form, setForm] = useState({
+    expense_date: "",
     category: "",
-    amount: 0,
+    amount: "",
     notes: "",
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+  // Fetch expenses
+  const fetchExpenses = async () => {
+    const { data, error } = await supabase
+      .from("expenses")
+      .select("id, expense_date, category, amount, notes")
+      .order("expense_date", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching expenses:", error.message);
+      return;
+    }
+
+    setExpenses(data || []);
   };
 
-  const addExpense = () => {
-    if (!form.date || !form.category || !form.amount) return;
-    setExpenses([...expenses, { ...form, id: expenses.length + 1, amount: Number(form.amount) }]);
-    setForm({ id: 0, date: "", category: "", amount: 0, notes: "" });
+  useEffect(() => {
+    fetchExpenses();
+  }, []);
+
+  // Add expense
+  const addExpense = async () => {
+    if (!form.expense_date || !form.category || !form.amount) {
+      alert("Please fill all required fields!");
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from("expenses")
+      .insert([
+        {
+          expense_date: form.expense_date,
+          category: form.category,
+          amount: Number(form.amount),
+          notes: form.notes,
+        },
+      ])
+      .select();
+
+    if (error) {
+      console.error("Error adding expense:", error.message);
+      alert(`Failed to add expense: ${error.message}`);
+      return;
+    }
+
+    setForm({ expense_date: "", category: "", amount: "", notes: "" });
+    fetchExpenses();
   };
+
+  // Delete expense
+  const deleteExpense = async (id: string) => {
+    const { error } = await supabase.from("expenses").delete().eq("id", id);
+    if (error) {
+      console.error("Error deleting expense:", error.message);
+      alert("Failed to delete expense.");
+      return;
+    }
+    fetchExpenses();
+  };
+
+  // Format currency as INR
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(value);
 
   return (
     <div className="p-6 space-y-6">
@@ -43,10 +92,31 @@ export default function Expenses() {
       <Card className="p-4 space-y-3">
         <h2 className="text-lg font-semibold">Add New Expense</h2>
         <div className="grid grid-cols-2 gap-3">
-          <Input name="date" type="date" value={form.date} onChange={handleChange} />
-          <Input name="category" placeholder="Category" value={form.category} onChange={handleChange} />
-          <Input name="amount" type="number" placeholder="Amount" value={form.amount} onChange={handleChange} />
-          <Input name="notes" placeholder="Notes" value={form.notes} onChange={handleChange} />
+          <Input
+            name="expense_date"
+            type="date"
+            value={form.expense_date}
+            onChange={(e) => setForm({ ...form, expense_date: e.target.value })}
+          />
+          <Input
+            name="category"
+            placeholder="Category"
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value })}
+          />
+          <Input
+            name="amount"
+            type="number"
+            placeholder="Amount"
+            value={form.amount}
+            onChange={(e) => setForm({ ...form, amount: e.target.value })}
+          />
+          <Input
+            name="notes"
+            placeholder="Notes"
+            value={form.notes}
+            onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          />
         </div>
         <Button onClick={addExpense}>Add Expense</Button>
       </Card>
@@ -61,17 +131,37 @@ export default function Expenses() {
               <th className="p-2">Category</th>
               <th className="p-2">Amount</th>
               <th className="p-2">Notes</th>
+              <th className="p-2 text-right">Action</th>
             </tr>
           </thead>
           <tbody>
-            {expenses.map((exp) => (
-              <tr key={exp.id} className="border-b hover:bg-muted/50">
-                <td className="p-2">{exp.date}</td>
-                <td className="p-2">{exp.category}</td>
-                <td className="p-2 font-medium text-primary">${exp.amount}</td>
-                <td className="p-2">{exp.notes}</td>
+            {expenses.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="text-center p-4 text-gray-500">
+                  No expenses yet
+                </td>
               </tr>
-            ))}
+            ) : (
+              expenses.map((exp) => (
+                <tr key={exp.id} className="border-b hover:bg-muted/50">
+                  <td className="p-2">{exp.expense_date}</td>
+                  <td className="p-2">{exp.category}</td>
+                  <td className="p-2 font-medium text-primary">
+                    {formatCurrency(exp.amount)}
+                  </td>
+                  <td className="p-2">{exp.notes}</td>
+                  <td className="p-2 text-right">
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => deleteExpense(exp.id)}
+                    >
+                      Delete
+                    </Button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </Card>
