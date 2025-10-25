@@ -54,7 +54,6 @@ export default function Products() {
     price: "",
   });
 
-  // ✅ Fetch products
   const fetchProducts = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -70,12 +69,10 @@ export default function Products() {
     fetchProducts();
   }, []);
 
-  // ✅ Handle form input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // ✅ Save product (add or update)
   const handleSave = async () => {
     const payload = {
       name: form.name.trim(),
@@ -91,8 +88,7 @@ export default function Products() {
         .update(payload)
         .eq("id", editProduct.id)
         .select();
-
-      if (error) console.error("Error updating product:", error.message);
+      if (error) console.error(error.message);
       else {
         setProducts((prev) =>
           prev.map((p) => (p.id === editProduct.id ? data[0] : p))
@@ -104,7 +100,7 @@ export default function Products() {
         .from("products")
         .insert([payload])
         .select();
-      if (error) console.error("Error adding product:", error.message);
+      if (error) console.error(error.message);
       else setProducts((prev) => [...prev, ...(data || [])]);
       setOpen(false);
     }
@@ -113,7 +109,6 @@ export default function Products() {
     setEditProduct(null);
   };
 
-  // ✅ Delete product (with custom dialog)
   const confirmDelete = (product: Product) => {
     setProductToDelete(product);
     setDeleteDialog(true);
@@ -121,26 +116,16 @@ export default function Products() {
 
   const handleDelete = async () => {
     if (!productToDelete) return;
-
     const { error } = await supabase
       .from("products")
       .delete()
       .eq("id", productToDelete.id);
-
-    if (error) {
-      console.error("❌ Error deleting product:", error.message);
-    } else {
-      console.log("✅ Product deleted:", productToDelete.name);
-      setProducts((prev) =>
-        prev.filter((p) => p.id !== productToDelete.id)
-      );
-    }
-
+    if (error) console.error(error.message);
+    else setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id));
     setDeleteDialog(false);
     setProductToDelete(null);
   };
 
-  // ✅ Edit product
   const handleEdit = (product: Product) => {
     setEditProduct(product);
     setForm({
@@ -153,14 +138,11 @@ export default function Products() {
     setOpen(true);
   };
 
-  // ✅ Currency formatter
   const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-    }).format(value);
+    new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(
+      value
+    );
 
-  // ✅ Filtering
   const filteredProducts = products.filter((product) => {
     const matchesSearch =
       product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -171,30 +153,24 @@ export default function Products() {
     return matchesSearch && matchesCategory;
   });
 
-  const categories = [
-    ...new Set(products.map((p) => p.category).filter(Boolean)),
-  ];
+  const categories = [...new Set(products.map((p) => p.category).filter(Boolean))];
 
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
+    <div className="p-4 sm:p-6 space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold heading-gradient">Products</h1>
-          <p className="text-muted-foreground">Manage your product inventory</p>
+          <h1 className="text-2xl sm:text-3xl font-bold heading-gradient">Products</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Manage your product inventory
+          </p>
         </div>
         <Button
           size="lg"
-          className="gradient-primary hover-glow"
+          className="gradient-primary hover-glow flex-1 sm:flex-none"
           onClick={() => {
             setEditProduct(null);
-            setForm({
-              name: "",
-              description: "",
-              category: "",
-              stock: "",
-              price: "",
-            });
+            setForm({ name: "", description: "", category: "", stock: "", price: "" });
             setOpen(true);
           }}
         >
@@ -203,8 +179,8 @@ export default function Products() {
       </div>
 
       {/* Filters */}
-      <div className="glass-card p-6">
-        <div className="flex flex-col sm:flex-row gap-4">
+      <div className="glass-card p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
@@ -216,7 +192,7 @@ export default function Products() {
             />
           </div>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-            <SelectTrigger className="w-48 glass-surface border-glass-border">
+            <SelectTrigger className="w-full sm:w-48 glass-surface border-glass-border">
               <Filter className="mr-2 w-4 h-4" />
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
@@ -232,12 +208,12 @@ export default function Products() {
         </div>
       </div>
 
-      {/* Products Table */}
-      {loading ? (
-        <p className="text-center text-muted-foreground">Loading...</p>
-      ) : (
-        <div className="glass-card">
-          <Table>
+      {/* Table */}
+      <div className="overflow-x-auto glass-card">
+        {loading ? (
+          <p className="text-center text-muted-foreground py-4">Loading...</p>
+        ) : (
+          <Table className="min-w-[600px] sm:min-w-full">
             <TableHeader>
               <TableRow>
                 <TableHead>Product</TableHead>
@@ -261,12 +237,8 @@ export default function Products() {
                     {formatCurrency(product.stock * product.price)}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleEdit(product)}
-                      >
+                    <div className="flex gap-2 flex-wrap">
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(product)}>
                         <Edit className="w-4 h-4" />
                       </Button>
                       <Button
@@ -283,16 +255,15 @@ export default function Products() {
               ))}
             </TableBody>
           </Table>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Add/Edit Modal */}
+      {/* Modals */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="glass-card border border-glass-border text-white">
+        <DialogContent className="glass-card border border-glass-border text-white max-w-md w-full">
           <DialogHeader>
             <DialogTitle>{editProduct ? "Edit Product" : "Add Product"}</DialogTitle>
           </DialogHeader>
-
           <div className="space-y-3 mt-2">
             <Input
               name="name"
@@ -332,30 +303,23 @@ export default function Products() {
               className="text-white placeholder:text-gray-400"
             />
           </div>
-
-          <DialogFooter className="mt-4">
+          <DialogFooter className="mt-4 flex justify-end gap-3">
             <Button variant="secondary" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>
-              {editProduct ? "Update" : "Save"}
-            </Button>
+            <Button onClick={handleSave}>{editProduct ? "Update" : "Save"}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation Dialog */}
       <Dialog open={deleteDialog} onOpenChange={setDeleteDialog}>
-        <DialogContent className="glass-card border border-glass-border text-white text-center">
+        <DialogContent className="glass-card border border-glass-border text-white text-center max-w-sm w-full">
           <DialogHeader>
             <DialogTitle>Confirm Deletion</DialogTitle>
           </DialogHeader>
           <p>
             Are you sure you want to delete{" "}
-            <span className="font-semibold text-destructive">
-              {productToDelete?.name}
-            </span>
-            ?
+            <span className="font-semibold text-destructive">{productToDelete?.name}</span>?
           </p>
           <DialogFooter className="mt-4 flex justify-center gap-3">
             <Button variant="secondary" onClick={() => setDeleteDialog(false)}>

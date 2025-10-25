@@ -52,7 +52,6 @@ export default function Transactions() {
     notes: "",
   });
 
-  // Fetch Data
   useEffect(() => {
     fetchAllData();
   }, []);
@@ -62,11 +61,7 @@ export default function Transactions() {
     const { data: suppliersData } = await supabase.from("suppliers").select("*");
     const { data: transactionsData } = await supabase
       .from("transactions")
-      .select(`
-        *,
-        products(name),
-        suppliers(name)
-      `)
+      .select(`*, products(name), suppliers(name)`)
       .order("created_at", { ascending: false });
 
     if (productsData) setProducts(productsData);
@@ -88,7 +83,6 @@ export default function Transactions() {
     }
   };
 
-  // Handle Submit
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -99,7 +93,6 @@ export default function Transactions() {
       return;
     }
 
-    // Insert transaction
     const { error } = await supabase.from("transactions").insert({
       product_id: productId,
       type: modalType.toUpperCase(),
@@ -110,14 +103,12 @@ export default function Transactions() {
     });
 
     if (!error) {
-      // Update stock
       const product = products.find((p) => p.id === productId);
       if (product) {
         const newStock =
           modalType === "in"
             ? product.stock + quantity
             : Math.max(0, product.stock - quantity);
-
         await supabase.from("products").update({ stock: newStock }).eq("id", productId);
       }
 
@@ -129,7 +120,6 @@ export default function Transactions() {
     setIsSubmitting(false);
   };
 
-  // Filtering & Stats
   const filteredTransactions = transactions.filter((t) => {
     const matchesSearch =
       t.productName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -149,7 +139,6 @@ export default function Transactions() {
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(value);
 
-
   const formatDate = (d: Date) =>
     new Intl.DateTimeFormat("en-IN", {
       year: "numeric",
@@ -157,20 +146,19 @@ export default function Transactions() {
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-      hour12: true, // optional, for AM/PM format
+      hour12: true,
     }).format(d);
 
-
   return (
-    <div className="p-6 space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 space-y-6 animate-fade-in">
+      {/* Header & Buttons */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold heading-gradient">Transactions</h1>
-          <p className="text-muted-foreground">Track all stock movements</p>
+          <h1 className="text-2xl sm:text-3xl font-bold heading-gradient">Transactions</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Track all stock movements</p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
           {["in", "out"].map((type) => (
             <Dialog key={type} open={isDialogOpen && modalType === type} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
@@ -179,18 +167,18 @@ export default function Transactions() {
                     setModalType(type as "in" | "out");
                     setIsDialogOpen(true);
                   }}
-                  className={`${
+                  className={`flex-1 sm:flex-none flex items-center justify-center gap-2 text-white ${
                     type === "in"
                       ? "bg-green-600 hover:bg-green-700"
                       : "bg-red-600 hover:bg-red-700"
-                  } text-white`}
+                  }`}
                 >
-                  {type === "in" ? <ArrowUp className="mr-2 w-5 h-5" /> : <ArrowDown className="mr-2 w-5 h-5" />}
+                  {type === "in" ? <ArrowUp className="w-5 h-5" /> : <ArrowDown className="w-5 h-5" />}
                   {type === "in" ? "Stock In" : "Stock Out"}
                 </Button>
               </DialogTrigger>
 
-              <DialogContent className="bg-background text-foreground border border-border shadow-lg max-w-md">
+              <DialogContent className="bg-background text-foreground border border-border shadow-lg max-w-md w-full">
                 <DialogHeader>
                   <DialogTitle className="text-lg font-semibold">
                     {type === "in" ? "Add Stock In" : "Record Stock Out"}
@@ -198,12 +186,11 @@ export default function Transactions() {
                 </DialogHeader>
 
                 <form onSubmit={handleSubmit} className="space-y-4 mt-4">
-                  {/* Product */}
                   <Select
                     value={formData.productId}
                     onValueChange={(v) => setFormData({ ...formData, productId: v })}
                   >
-                    <SelectTrigger className="w-full bg-card border border-border text-foreground">
+                    <SelectTrigger className="w-full bg-card border text-foreground">
                       <SelectValue placeholder="Select Product" />
                     </SelectTrigger>
                     <SelectContent className="bg-card text-foreground">
@@ -215,7 +202,6 @@ export default function Transactions() {
                     </SelectContent>
                   </Select>
 
-                  {/* Quantity */}
                   <Input
                     type="number"
                     placeholder="Quantity"
@@ -228,7 +214,6 @@ export default function Transactions() {
                     className="bg-card border text-foreground"
                   />
 
-                  {/* Unit Price */}
                   <Input
                     type="number"
                     placeholder="Unit Price"
@@ -242,7 +227,6 @@ export default function Transactions() {
                     className="bg-card border text-foreground"
                   />
 
-                  {/* Supplier */}
                   <Select
                     value={formData.supplierId}
                     onValueChange={(v) => setFormData({ ...formData, supplierId: v })}
@@ -267,10 +251,8 @@ export default function Transactions() {
                   />
 
                   <DialogFooter>
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? (
-                        <Loader2 className="mr-2 w-4 h-4 animate-spin" />
-                      ) : null}
+                    <Button type="submit" className="w-full" disabled={isSubmitting}>
+                      {isSubmitting ? <Loader2 className="mr-2 w-4 h-4 animate-spin" /> : null}
                       {isSubmitting ? "Saving..." : "Submit"}
                     </Button>
                   </DialogFooter>
@@ -282,40 +264,34 @@ export default function Transactions() {
       </div>
 
       {/* Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="glass-card p-6 flex items-center gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="glass-card p-4 flex items-center gap-3">
           <ArrowUp className="w-6 h-6 text-green-600" />
           <div>
             <p className="text-sm text-muted-foreground">Stock In Value</p>
-            <p className="text-2xl font-bold text-green-600">
-              {formatCurrency(totalStockIn)}
-            </p>
+            <p className="text-2xl font-bold text-green-600">{formatCurrency(totalStockIn)}</p>
           </div>
         </div>
-        <div className="glass-card p-6 flex items-center gap-3">
+        <div className="glass-card p-4 flex items-center gap-3">
           <ArrowDown className="w-6 h-6 text-red-600" />
           <div>
             <p className="text-sm text-muted-foreground">Stock Out Value</p>
-            <p className="text-2xl font-bold text-red-600">
-              {formatCurrency(totalStockOut)}
-            </p>
+            <p className="text-2xl font-bold text-red-600">{formatCurrency(totalStockOut)}</p>
           </div>
         </div>
-        <div className="glass-card p-6 flex items-center gap-3">
+        <div className="glass-card p-4 flex items-center gap-3">
           <Calendar className="w-6 h-6 text-blue-600" />
           <div>
             <p className="text-sm text-muted-foreground">Total Transactions</p>
-            <p className="text-2xl font-bold text-blue-600">
-              {filteredTransactions.length}
-            </p>
+            <p className="text-2xl font-bold text-blue-600">{filteredTransactions.length}</p>
           </div>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="glass-card p-6 flex flex-col sm:flex-row gap-4">
+      <div className="glass-card p-4 flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search transactions..."
             value={searchTerm}
@@ -324,7 +300,7 @@ export default function Transactions() {
           />
         </div>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-48 bg-card text-foreground">
+          <SelectTrigger className="w-full sm:w-48 bg-card text-foreground">
             <SelectValue placeholder="Filter by Type" />
           </SelectTrigger>
           <SelectContent className="bg-card text-foreground">
@@ -336,8 +312,8 @@ export default function Transactions() {
       </div>
 
       {/* Table */}
-      <div className="glass-card">
-        <Table>
+      <div className="glass-card overflow-x-auto">
+        <Table className="min-w-[700px] sm:min-w-full">
           <TableHeader>
             <TableRow>
               <TableHead>Date</TableHead>
@@ -363,11 +339,7 @@ export default function Transactions() {
                         : "bg-red-500/20 text-red-600 dark:text-red-400"
                     }`}
                   >
-                    {t.type === "IN" ? (
-                      <ArrowUp className="w-3 h-3" />
-                    ) : (
-                      <ArrowDown className="w-3 h-3" />
-                    )}
+                    {t.type === "IN" ? <ArrowUp className="w-3 h-3" /> : <ArrowDown className="w-3 h-3" />}
                     {t.type === "IN" ? "Stock In" : "Stock Out"}
                   </Badge>
                 </TableCell>
