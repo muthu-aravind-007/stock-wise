@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext"; // ✅ make sure AuthContext exists
+import image from "../assets/icons8-google-96.png";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
@@ -94,7 +95,7 @@ export default function SignIn() {
           onClick={handleGoogleSignIn}
           className="w-full mt-4 py-3 rounded-lg bg-white text-black font-semibold text-lg flex items-center justify-center gap-2 hover:scale-105 transition-transform"
         >
-          <img src="/google-icon.svg" alt="Google" className="w-5 h-5" />
+          <img src={image} alt="Google" className="w-5 h-5" />
           Sign in with Google
         </button>
 
