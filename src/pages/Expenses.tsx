@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { supabase } from "@/lib/supabaseClient"; // ✅ use the shared client
+import { supabase } from "@/lib/supabaseClient";
 
 type Expense = {
   id: string;
@@ -47,17 +47,14 @@ export default function Expenses() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("expenses")
-      .insert([
-        {
-          expense_date: form.expense_date,
-          category: form.category,
-          amount: Number(form.amount),
-          notes: form.notes,
-        },
-      ])
-      .select();
+    const { error } = await supabase.from("expenses").insert([
+      {
+        expense_date: form.expense_date,
+        category: form.category,
+        amount: Number(form.amount),
+        notes: form.notes,
+      },
+    ]);
 
     if (error) {
       console.error("Error adding expense:", error.message);
@@ -80,18 +77,18 @@ export default function Expenses() {
     fetchExpenses();
   };
 
-  // Format currency as INR
+  // Format currency
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(value);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-6">
       <h1 className="text-2xl font-bold">Expenses</h1>
 
       {/* Add Expense Form */}
       <Card className="p-4 space-y-3">
         <h2 className="text-lg font-semibold">Add New Expense</h2>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Input
             name="expense_date"
             type="date"
@@ -118,20 +115,22 @@ export default function Expenses() {
             onChange={(e) => setForm({ ...form, notes: e.target.value })}
           />
         </div>
-        <Button onClick={addExpense}>Add Expense</Button>
+        <div className="flex justify-end">
+          <Button onClick={addExpense}>Add Expense</Button>
+        </div>
       </Card>
 
       {/* Expenses Table */}
-      <Card className="p-4">
+      <Card className="p-4 overflow-x-auto">
         <h2 className="text-lg font-semibold mb-3">Expense List</h2>
-        <table className="w-full text-sm border-collapse">
+        <table className="min-w-full text-sm border-collapse">
           <thead>
             <tr className="text-left border-b">
-              <th className="p-2">Date</th>
-              <th className="p-2">Category</th>
-              <th className="p-2">Amount</th>
-              <th className="p-2">Notes</th>
-              <th className="p-2 text-right">Action</th>
+              <th className="p-2 whitespace-nowrap">Date</th>
+              <th className="p-2 whitespace-nowrap">Category</th>
+              <th className="p-2 whitespace-nowrap">Amount</th>
+              <th className="p-2 whitespace-nowrap">Notes</th>
+              <th className="p-2 text-right whitespace-nowrap">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -149,7 +148,7 @@ export default function Expenses() {
                   <td className="p-2 font-medium text-primary">
                     {formatCurrency(exp.amount)}
                   </td>
-                  <td className="p-2">{exp.notes}</td>
+                  <td className="p-2 break-words">{exp.notes}</td>
                   <td className="p-2 text-right">
                     <Button
                       variant="destructive"
